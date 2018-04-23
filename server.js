@@ -10,6 +10,19 @@ var axios = require("axios");
 var cheerio = require("cheerio");
 var request = require("request");
 
+
+//===========================================================================================================
+// If deployed, use the deployed database. Otherwise use the local mongoHeadlines database
+var MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/mongoHeadlines";
+
+// Set mongoose to leverage built in JavaScript ES6 Promises
+// Connect to the Mongo DB
+mongoose.Promise = Promise;
+mongoose.connect(MONGODB_URI, function(er, er2) {
+    console.log(er2)
+});
+//============================================================================================================
+
 // Require all models
 // var mongoose = require("./models");
 // var Note = require("./models/Note.js");
@@ -31,21 +44,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 // Database configuration with mongoose
-mongoose.connect(
-  "mongodb://<dbuser>:<dbpassword>@ds249269.mlab.com:49269/heroku_gsbb7qzx"
-);
-var db = mongoose.connection;
+// mongoose.connect(
+//   "mongodb://<dbuser>:<dbpassword>@ds249269.mlab.com:49269/heroku_gsbb7qzx"
+// );
+// var db = mongoose.connect();
 //mongodb://localhost/newsMongo
 
 // Show any mongoose errors
-db.on("error", function(error) {
-  console.log("Mongoose Error: ", error);
-});
 
-// Once logged in to the db through mongoose, log a success message
-db.once("open", function() {
-  console.log("Mongoose connection successful.");
-});
 
 // Set Handlebars.
 var exphbs = require("express-handlebars");
@@ -60,6 +66,8 @@ app.set("view engine", "handlebars");
 
 app.get("/scrape", function(req, res) {
   console.log("TEST");
+  //............................................................................................
+  //toutor helped and said request insted of axios
   // Make request to grab the HTML from `awwards's` clean website section
   request("http://www.bbc.com/news", function(error, response, html) {
     // Load the HTML into cheerio
@@ -70,33 +78,35 @@ app.get("/scrape", function(req, res) {
 ///////////////////////////////////////////////////////////
         //I WANT TO KNOW IF IF CAN DO THIS
         //WHY DOES THIS ERROR  CAN NOT READ FIND OF UNDEFINED 
-// $("gs-c-promo-body").each(function(i, element) {
+// $(".gs-c-promo-body").each(function(i, element) {
 //         var result = {};
 //         result.title = $(this).children("div").children("gs-c-promo-heading").text();
 //         result.link = $(this).children("div").children("gs-c-promo-heading").attr("href");
 //         result.link = $(this).children("div").children("gs-c-promo-summary").text();
-        
+//         //
 ///////////////////////////////////////////////////////////
 
-    $("a").each(function(i, element) {
+    // $("a").each(function(i, element) {
+    $(".gs-c-promo-body").each(function(i, element) {
       // console.log(element);
       var result = {};
       //    .children("h3")
       result.title = $(this).text();
       result.link = $(this).attr("href");
+      result.summary = $(this).next().text();
       //    console.log( $(this).children("h3").text())
       console.log(result);
 //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-      //   // Create a new Article using the `result` object built from scraping
-      //   db.Article.create(result)
-      //     .then(function(dbArticle) {
-      //       // View the added result in the console
-      //       console.log(dbArticle);
-      //     })
-      //     .catch(function(err) {
-      //       // If an error occurred, send it to the client
-      //       return res.json(err);
-      //     });
+        // Create a new Article using the `result` object built from scraping
+        db.Article.create(result)
+          .then(function(dbArticle) {
+            // View the added result in the console
+            console.log(dbArticle);
+          })
+          .catch(function(err) {
+            // If an error occurred, send it to the client
+            return res.json(err);
+          });
 //XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     });
 
@@ -107,6 +117,10 @@ app.get("/scrape", function(req, res) {
 
 // Route for getting all Articles from the db
 app.get("/articles", function(req, res) {
+    // console.log(req);
+    // console.log(res);
+    // console.log(db);
+    // console.log(db.Article);
   // Grab every document in the Articles collection
   db.Article.find({})
     .then(function(dbArticle) {
